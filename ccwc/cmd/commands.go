@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -74,24 +74,23 @@ func init() {
 //
 // Parameters:
 //   - filename: The path of the file.
-//   - command: The type of count operation to perform ("c", "l", "w", or "m").
+//   - commands: The types of count operations to perform ("c", "l", "w", or "m").
 //
 // Returns:
-//   - An integer representing the count of the specified unit type.
-func handleFile(filename string, command string) int {
-	file, err := os.Open(filename)
+//   - An integer array representing the count of the specified unit types.
+func handleFile(filename string, commands []string) []int {
+	content, err := os.ReadFile(filename)
 	if err != nil {
-		fmt.Printf("file %v not found\n", filename)
+		fmt.Println("Error:\n", err)
+		os.Exit(2)
 	}
 
-	defer file.Close()
-
-	count, err := count(file, command)
+	counts, err := count(content, commands)
 	if err != nil {
 		fmt.Printf("An error has occurred %v", err)
 	}
 
-	return count
+	return counts
 }
 
 // handleCommand processes the given file with the specified command and prints the result.
@@ -100,8 +99,36 @@ func handleFile(filename string, command string) int {
 //   - filename: The path of the file.
 //   - command: The type of count operation to perform ("c", "l", "w", or "m").
 func handleCommand(filename string, command string) {
-	count := handleFile(filename, command)
+	var count int = 0
+	if len(filename) > 0 {
+		count = handleFile(filename, []string{command})[0]
+	} else {
+		count = handleStdin([]string{command})[0]
+	}
 	fmt.Printf("%d %s", count, filename)
+}
+
+// handleStdin reads the standard input, it uses the count function to return the count.
+// If an error occurs, an error message is printed.
+//
+// Parameters:
+//   - commands: The types of count operations to perform ("c", "l", "w", or "m").
+//
+// Returns:
+//   - An integer array representing the count of the specified unit types.
+func handleStdin(commands []string) []int {
+	content, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		fmt.Println("Error:\n", err)
+		os.Exit(2)
+	}
+
+	counts, err := count(content, commands)
+	if err != nil {
+		fmt.Printf("An error has occurred %v", err)
+	}
+
+	return counts
 }
 
 // handleCommands processes the given file with the specified commands and prints the results.
@@ -111,9 +138,10 @@ func handleCommand(filename string, command string) {
 //   - commands: The types of count operation to perform ("c", "l", "w", or "m").
 func handleCommands(filename string, commands []string) {
 	var counts []int
-	for _, command := range commands {
-		count := handleFile(filename, command)
-		counts = append(counts, count)
+	if len(filename) > 0 {
+		counts = handleFile(filename, commands)
+	} else {
+		counts = handleStdin(commands)
 	}
 
 	countsStr := strings.Trim(fmt.Sprint(counts), "[]")
@@ -133,28 +161,27 @@ func handleCommands(filename string, commands []string) {
 // Returns:
 //   - An integer representing the count of the specified unit type.
 //   - An error, if any, encountered during scanning the content.
-func count(content io.Reader, command string) (int, error) {
-	scanner := bufio.NewScanner(content)
+func count(content []byte, commands []string) ([]int, error) {
+	var counters []int
 
-	switch command {
-	case "c":
-		scanner.Split(bufio.ScanBytes)
-	case "l":
-		scanner.Split(bufio.ScanLines)
-	case "w":
-		scanner.Split(bufio.ScanWords)
-	case "m":
-		scanner.Split(bufio.ScanRunes)
+	for _, command := range commands {
+		switch command {
+		case "c":
+			counters = append(counters, len(content))
+		case "l":
+			var counter int
+			for i := 0; i < len(content); i++ {
+				if string(content[i]) == "\n" {
+					counter++
+				}
+			}
+			counters = append(counters, counter)
+		case "w":
+			counters = append(counters, len(bytes.Fields(content)))
+		case "m":
+			counters = append(counters, len(bytes.Runes(content)))
+		}
 	}
 
-	var counter int
-	for scanner.Scan() {
-		counter++
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("there was an error reading the content %w", err)
-	}
-
-	return counter, nil
+	return counters, nil
 }

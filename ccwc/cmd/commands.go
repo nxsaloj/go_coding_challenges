@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -30,20 +31,30 @@ for learning Golang by nxcrypt.`,
 			filename = args[0]
 		}
 
+		var flagsUsed bool = false
 		if cmd.Flags().Changed("bytes") {
+			flagsUsed = true
 			handleCommand(filename, "c")
 		}
 
 		if cmd.Flags().Changed("lines") {
+			flagsUsed = true
 			handleCommand(filename, "l")
 		}
 
 		if cmd.Flags().Changed("words") {
+			flagsUsed = true
 			handleCommand(filename, "w")
 		}
 
 		if cmd.Flags().Changed("multibytes") {
+			flagsUsed = true
 			handleCommand(filename, "m")
+		}
+
+		if !flagsUsed {
+			commands := []string{"l", "w", "c"}
+			handleCommands(filename, commands)
 		}
 	},
 }
@@ -58,12 +69,16 @@ func init() {
 	rootCmd.Flags().BoolP("multibytes", "m", false, "count multibytes in content")
 }
 
-// handleCommand processes the given file with the specified command and prints the result.
+// handleFile opens the given file, it uses the count function to return the count.
+// If an error occurs, an error message is printed.
 //
 // Parameters:
 //   - filename: The path of the file.
 //   - command: The type of count operation to perform ("c", "l", "w", or "m").
-func handleCommand(filename string, command string) {
+//
+// Returns:
+//   - An integer representing the count of the specified unit type.
+func handleFile(filename string, command string) int {
 	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Printf("file %v not found\n", filename)
@@ -76,7 +91,33 @@ func handleCommand(filename string, command string) {
 		fmt.Printf("An error has occurred %v", err)
 	}
 
+	return count
+}
+
+// handleCommand processes the given file with the specified command and prints the result.
+//
+// Parameters:
+//   - filename: The path of the file.
+//   - command: The type of count operation to perform ("c", "l", "w", or "m").
+func handleCommand(filename string, command string) {
+	count := handleFile(filename, command)
 	fmt.Printf("%d %s", count, filename)
+}
+
+// handleCommands processes the given file with the specified commands and prints the results.
+//
+// Parameters:
+//   - filename: The path of the file.
+//   - commands: The types of count operation to perform ("c", "l", "w", or "m").
+func handleCommands(filename string, commands []string) {
+	var counts []int
+	for _, command := range commands {
+		count := handleFile(filename, command)
+		counts = append(counts, count)
+	}
+
+	countsStr := strings.Trim(fmt.Sprint(counts), "[]")
+	fmt.Printf("%s %s", countsStr, filename)
 }
 
 // count counts the number of units in the content based on the specified command.

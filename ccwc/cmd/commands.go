@@ -34,27 +34,48 @@ for learning Golang by nxcrypt.`,
 		var flagsUsed bool = false
 		if cmd.Flags().Changed("bytes") {
 			flagsUsed = true
-			handleCommand(filename, "c")
+			err := handleCommand(filename, "c")
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return
+			}
 		}
 
 		if cmd.Flags().Changed("lines") {
 			flagsUsed = true
-			handleCommand(filename, "l")
+			err := handleCommand(filename, "l")
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return
+			}
 		}
 
 		if cmd.Flags().Changed("words") {
 			flagsUsed = true
-			handleCommand(filename, "w")
+			err := handleCommand(filename, "w")
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return
+			}
 		}
 
 		if cmd.Flags().Changed("multibytes") {
 			flagsUsed = true
-			handleCommand(filename, "m")
+			err := handleCommand(filename, "m")
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return
+			}
 		}
 
 		if !flagsUsed {
 			commands := []string{"l", "w", "c"}
-			handleCommands(filename, commands)
+
+			err := handleCommands(filename, commands)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return
+			}
 		}
 	},
 }
@@ -78,11 +99,10 @@ func init() {
 //
 // Returns:
 //   - An integer array representing the count of the specified unit types.
-func handleFile(filename string, commands []string) []int {
+func handleFile(filename string, commands []string) ([]int, error) {
 	content, err := os.ReadFile(filename)
 	if err != nil {
-		fmt.Println("Error:\n", err)
-		os.Exit(2)
+		return nil, err
 	}
 
 	counts, err := count(content, commands)
@@ -90,7 +110,7 @@ func handleFile(filename string, commands []string) []int {
 		fmt.Printf("An error has occurred %v", err)
 	}
 
-	return counts
+	return counts, nil
 }
 
 // handleCommand processes the given file with the specified command and prints the result.
@@ -98,14 +118,23 @@ func handleFile(filename string, commands []string) []int {
 // Parameters:
 //   - filename: The path of the file.
 //   - command: The type of count operation to perform ("c", "l", "w", or "m").
-func handleCommand(filename string, command string) {
+func handleCommand(filename string, command string) error {
 	var count int = 0
 	if len(filename) > 0 {
-		count = handleFile(filename, []string{command})[0]
+		counters, err := handleFile(filename, []string{command})
+		if err != nil {
+			return err
+		}
+		count = counters[0]
 	} else {
-		count = handleStdin([]string{command})[0]
+		counters, err := handleStdin([]string{command})
+		if err != nil {
+			return err
+		}
+		count = counters[0]
 	}
 	fmt.Printf("%d %s", count, filename)
+	return nil
 }
 
 // handleStdin reads the standard input, it uses the count function to return the count.
@@ -116,11 +145,10 @@ func handleCommand(filename string, command string) {
 //
 // Returns:
 //   - An integer array representing the count of the specified unit types.
-func handleStdin(commands []string) []int {
+func handleStdin(commands []string) ([]int, error) {
 	content, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		fmt.Println("Error:\n", err)
-		os.Exit(2)
+		return nil, err
 	}
 
 	counts, err := count(content, commands)
@@ -128,7 +156,7 @@ func handleStdin(commands []string) []int {
 		fmt.Printf("An error has occurred %v", err)
 	}
 
-	return counts
+	return counts, nil
 }
 
 // handleCommands processes the given file with the specified commands and prints the results.
@@ -136,16 +164,24 @@ func handleStdin(commands []string) []int {
 // Parameters:
 //   - filename: The path of the file.
 //   - commands: The types of count operation to perform ("c", "l", "w", or "m").
-func handleCommands(filename string, commands []string) {
+func handleCommands(filename string, commands []string) error {
 	var counts []int
+	var err error
 	if len(filename) > 0 {
-		counts = handleFile(filename, commands)
+		counts, err = handleFile(filename, commands)
+		if err != nil {
+			return err
+		}
 	} else {
-		counts = handleStdin(commands)
+		counts, err = handleStdin(commands)
+		if err != nil {
+			return err
+		}
 	}
 
 	countsStr := strings.Trim(fmt.Sprint(counts), "[]")
 	fmt.Printf("%s %s", countsStr, filename)
+	return nil
 }
 
 // count counts the number of units in the content based on the specified command.

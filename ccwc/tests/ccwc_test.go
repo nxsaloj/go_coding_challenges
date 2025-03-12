@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -10,7 +11,10 @@ import (
 	"testing"
 )
 
+// The file can be downloaded from https://codingchallenges.fyi/challenges/challenge-wc
+var filePath = "../test.txt"
 var binaryName = "ccwc-test"
+
 var contents = []string{
 	"hello",
 	"line1\nline2\nline3\n",
@@ -51,9 +55,41 @@ var tests = []struct {
 	},
 }
 
+var fileTests = []struct {
+	name     string
+	args     []string
+	expected []string
+}{
+	{
+		name:     "Count bytes",
+		args:     []string{"-c"},
+		expected: []string{"342190"},
+	},
+	{
+		name:     "Count lines",
+		args:     []string{"-l"},
+		expected: []string{"7145"},
+	},
+	{
+		name:     "Count words",
+		args:     []string{"-w"},
+		expected: []string{"58164"},
+	},
+	{
+		name:     "Count multibytes",
+		args:     []string{"-m"},
+		expected: []string{"339292"},
+	},
+	{
+		name:     "Count default (-l, -w, -c)",
+		args:     []string{""},
+		expected: []string{"7145 58164 342190"},
+	},
+}
+
 func buildBinary() error {
 	// Add .exe extension if on Windows
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && binaryName[len(binaryName)-4:] != ".exe" {
 		binaryName += ".exe"
 	}
 
@@ -87,6 +123,76 @@ func TestCCWCContents(t *testing.T) {
 
 				if strings.TrimSpace(out.String()) != test.expected[index] {
 					t.Errorf("%s:\n\texpected %s\n\tgot %s", test.name, test.expected[index], out.String())
+				}
+			}
+		})
+	}
+}
+
+func TestCCWCFile(t *testing.T) {
+	err := buildBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("./" + binaryName)
+
+	for _, test := range fileTests {
+		t.Run(test.name, func(t *testing.T) {
+			for index, arg := range test.args {
+				args := []string{filePath}
+				if len(arg) > 0 {
+					args = append([]string{arg}, args...)
+				}
+
+				cmd := exec.Command("./"+binaryName, args...)
+				var out bytes.Buffer
+				cmd.Stdout = &out
+
+				err := cmd.Run()
+				if err != nil {
+					t.Fatalf("command failed: %v", err)
+				}
+
+				output := strings.TrimSpace(strings.Replace(out.String(), filePath, "", -1))
+				if output != test.expected[index] {
+					t.Errorf("%s:\n\texpected %s\n\tgot %s", test.name, test.expected[index], output)
+				}
+			}
+		})
+	}
+}
+
+func TestCCWCStdin(t *testing.T) {
+	err := buildBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("./" + binaryName)
+
+	for _, test := range fileTests {
+		t.Run(test.name, func(t *testing.T) {
+			for index, arg := range test.args {
+				cmd := exec.Command("./"+binaryName, arg)
+
+				inputFile, fileErr := os.Open(filePath)
+				if fileErr != nil {
+					log.Fatalf("Error opening input file: %v", fileErr)
+					return
+				}
+				defer inputFile.Close()
+
+				cmd.Stdin = inputFile
+				var out bytes.Buffer
+				cmd.Stdout = &out
+
+				err := cmd.Run()
+				if err != nil {
+					t.Fatalf("command failed: %v", err)
+				}
+
+				output := strings.TrimSpace(out.String())
+				if output != test.expected[index] {
+					t.Errorf("%s:\n\texpected %s\n\tgot %s", test.name, test.expected[index], output)
 				}
 			}
 		})

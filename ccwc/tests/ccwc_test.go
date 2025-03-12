@@ -53,6 +53,11 @@ var tests = []struct {
 		args:     []string{""},
 		expected: []string{"0 1 5", "3 3 18", "0 5 23", "0 1 6", "2 5 25"},
 	},
+	{
+		name:     "Count wrong",
+		args:     []string{"-a"},
+		expected: []string{},
+	},
 }
 
 var fileTests = []struct {
@@ -84,6 +89,11 @@ var fileTests = []struct {
 		name:     "Count default (-l, -w, -c)",
 		args:     []string{""},
 		expected: []string{"7145 58164 342190"},
+	},
+	{
+		name:     "Count wrong",
+		args:     []string{"-a"},
+		expected: []string{},
 	},
 }
 
@@ -118,10 +128,11 @@ func TestCCWCContents(t *testing.T) {
 
 				err := cmd.Run()
 				if err != nil {
-					t.Fatalf("command failed: %v", err)
-				}
-
-				if strings.TrimSpace(out.String()) != test.expected[index] {
+					expectedErr := "exit status 1"
+					if !strings.Contains(strings.TrimSpace(err.Error()), expectedErr) {
+						t.Errorf("%s: expected: %s got: %s, for command %s\n", test.name, expectedErr, err, test.args)
+					}
+				} else if strings.TrimSpace(out.String()) != test.expected[index] {
 					t.Errorf("%s:\n\texpected %s\n\tgot %s", test.name, test.expected[index], out.String())
 				}
 			}
@@ -150,11 +161,11 @@ func TestCCWCFile(t *testing.T) {
 
 				err := cmd.Run()
 				if err != nil {
-					t.Fatalf("command failed: %v", err)
-				}
-
-				output := strings.TrimSpace(strings.Replace(out.String(), filePath, "", -1))
-				if output != test.expected[index] {
+					expectedErr := "exit status 1"
+					if !strings.Contains(strings.TrimSpace(err.Error()), expectedErr) {
+						t.Errorf("%s: expected: %s got: %s, for command %s\n", test.name, expectedErr, err, test.args)
+					}
+				} else if output := strings.TrimSpace(strings.Replace(out.String(), filePath, "", -1)); output != test.expected[index] {
 					t.Errorf("%s:\n\texpected %s\n\tgot %s", test.name, test.expected[index], output)
 				}
 			}
@@ -187,11 +198,11 @@ func TestCCWCStdin(t *testing.T) {
 
 				err := cmd.Run()
 				if err != nil {
-					t.Fatalf("command failed: %v", err)
-				}
-
-				output := strings.TrimSpace(out.String())
-				if output != test.expected[index] {
+					expectedErr := "exit status 1"
+					if !strings.Contains(strings.TrimSpace(err.Error()), expectedErr) {
+						t.Errorf("%s: expected: %s got: %s, for command %s\n", test.name, expectedErr, err, test.args)
+					}
+				} else if output := strings.TrimSpace(strings.Replace(out.String(), filePath, "", -1)); output != test.expected[index] {
 					t.Errorf("%s:\n\texpected %s\n\tgot %s", test.name, test.expected[index], output)
 				}
 			}

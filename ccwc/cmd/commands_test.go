@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -10,6 +12,7 @@ func strToBytes(value string) []byte {
 }
 
 var contents = []string{
+	"",
 	"hello",
 	"line1\nline2\nline3\n",
 	"hello world, this is Go",
@@ -22,9 +25,15 @@ var singleCommandTests = []struct {
 	expected      []int
 }{
 	{
+		name:     "Count nothing",
+		command:  "a",
+		expected: []int{},
+	},
+	{
 		name:    "Count bytes",
 		command: "c",
 		expected: []int{
+			0,
 			5,
 			18,
 			23,
@@ -37,6 +46,7 @@ var singleCommandTests = []struct {
 		command: "l",
 		expected: []int{
 			0,
+			0,
 			3,
 			0,
 			0,
@@ -47,6 +57,7 @@ var singleCommandTests = []struct {
 		name:    "Count words",
 		command: "w",
 		expected: []int{
+			0,
 			1,
 			3,
 			5,
@@ -58,6 +69,7 @@ var singleCommandTests = []struct {
 		name:    "Count multibytes",
 		command: "m",
 		expected: []int{
+			0,
 			5,
 			18,
 			23,
@@ -76,12 +88,18 @@ var multipleCommandsTest = []struct {
 		name:     "Count multiple metrics",
 		commands: []string{"l", "w", "c"},
 		expected: [][]int{
+			{0, 0, 0},
 			{0, 1, 5},
 			{3, 3, 18},
 			{0, 5, 23},
 			{0, 1, 6},
 			{2, 5, 25},
 		},
+	},
+	{
+		name:     "Count multiple metrics",
+		commands: []string{"r", "w", "c"},
+		expected: [][]int{},
 	},
 }
 
@@ -90,32 +108,41 @@ func TestCount(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			for index, content := range contents {
 				results, err := count(strToBytes(content), []string{test.command})
-				if err != nil {
-					t.Fatalf("count() returned an error: %v", err)
-				}
 
-				if results[0] != test.expected[index] {
-					t.Errorf("%s: expected %d got %d, for command %s", test.name, test.expected[index], results[0], test.command)
+				if err != nil {
+					expectedErr := fmt.Sprintf("error: unknown shorthand flag: '%[1]v' in -%[1]v", test.command)
+					if !strings.Contains(err.Error(), expectedErr) {
+						t.Errorf("%s: expected %s got %s, for command %s\n", test.name, expectedErr, err, test.command)
+					}
+				} else if results[0] != test.expected[index] {
+					t.Errorf("%s: expected %d got %d, for command %s\n", test.name, test.expected[index], results[0], test.command)
 				}
 			}
 		})
 	}
+}
+
+func TestMultipleCount(t *testing.T) {
 
 	for _, test := range multipleCommandsTest {
 		t.Run(test.name, func(t *testing.T) {
 			for index, content := range contents {
 				results, err := count(strToBytes(content), test.commands)
+
 				if err != nil {
-					t.Fatalf("count() returned an error: %v", err)
-				}
+					expectedErr := "error: unknown shorthand flag:"
+					if !strings.Contains(err.Error(), expectedErr) {
+						t.Errorf("%s: expected %s got %s, for command %s\n", test.name, expectedErr, err, test.commands)
+					}
+				} else {
+					if len(results) != len(test.expected[index]) {
+						t.Errorf("%s: expected %d, got %d", test.name, len(test.expected[index]), len(results))
+					}
 
-				if len(results) != len(test.expected[index]) {
-					t.Errorf("%s: expected %d, got %d", test.name, len(test.expected[index]), len(results))
-				}
-
-				for idx, _result := range results {
-					if _result != test.expected[index][idx] {
-						t.Errorf("%s: expected %d for command %s, got %d", test.name, test.expected[index][idx], test.commands[idx], _result)
+					for idx, _result := range results {
+						if _result != test.expected[index][idx] {
+							t.Errorf("%s: expected %d for command %s, got %d", test.name, test.expected[index][idx], test.commands[idx], _result)
+						}
 					}
 				}
 			}

@@ -216,6 +216,8 @@ func count(content []byte, commands []string) ([]int, error) {
 			counters = append(counters, len(bytes.Fields(content)))
 		case "m":
 			counters = append(counters, len(bytes.Runes(content)))
+		default:
+			return nil, fmt.Errorf("error: unknown shorthand flag: '%[1]v' in -%[1]v", command)
 		}
 	}
 

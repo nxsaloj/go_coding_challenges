@@ -1,0 +1,52 @@
+name: Verify tests on PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract Project Name from Branch
+        id: extract_project
+        run: echo "PROJECT_NAME=$(echo '${{ github.head_ref }}' | cut -d'/' -f2)" >> $GITHUB_ENV
+        
+      - name: Verify Extracted Project
+        run: echo "Project extracted $PROJECT_NAME"
+        
+      - name: Checkout Code
+        uses: actions/checkout@v4
+            
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+
+      - name: Install Dependencies
+        run: |
+          if [ -d "$PROJECT_NAME" ]; then
+            cd $PROJECT_NAME
+            go mod tidy
+          else
+            echo "Directory $PROJECT_NAME not found, skipping..."
+          fi
+
+      - name: Cache Go Modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run Tests
+        run: |
+          if [ -d "$PROJECT_NAME" ]; then
+            cd $PROJECT_NAME
+            go test -v ./...
+          else
+            echo "No tests found for $PROJECT_NAME, skipping..."
+          fi

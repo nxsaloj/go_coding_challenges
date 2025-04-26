@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Extract Project Name from Branch
         id: extract_project
-        run: echo "PROJECT_NAME=$(echo '${{ github.head_ref }}' | cut -d'/' -f2)" >> $GITHUB_ENV
+        run: echo "PROJECT_NAME=$(echo '${{ github.head_ref }}' | cut -d'/' -f2 | cut -d'-' -f1)" >> $GITHUB_ENV
         
       - name: Verify Extracted Project
         run: echo "Project extracted $PROJECT_NAME"

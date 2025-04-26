@@ -12,7 +12,7 @@ import (
 )
 
 // The file can be downloaded from https://codingchallenges.fyi/challenges/challenge-wc
-var filePath = "../test.txt"
+var filePath = "./test.txt"
 var binaryName = "ccwc-test"
 
 var contents = []string{

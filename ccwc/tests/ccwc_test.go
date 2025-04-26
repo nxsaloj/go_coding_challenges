@@ -97,12 +97,6 @@ var fileTests = []struct {
 	},
 }
 
-func skipCI(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping testing in CI environment")
-	}
-}
-
 func buildBinary() error {
 	// Add .exe extension if on Windows
 	if runtime.GOOS == "windows" && binaryName[len(binaryName)-4:] != ".exe" {
@@ -147,8 +141,6 @@ func TestCCWCContents(t *testing.T) {
 }
 
 func TestCCWCFile(t *testing.T) {
-	skipCI(t)
-
 	err := buildBinary()
 	if err != nil {
 		t.Fatal(err)
@@ -182,8 +174,6 @@ func TestCCWCFile(t *testing.T) {
 }
 
 func TestCCWCStdin(t *testing.T) {
-	skipCI(t)
-
 	err := buildBinary()
 	if err != nil {
 		t.Fatal(err)

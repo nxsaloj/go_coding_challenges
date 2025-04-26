@@ -25,11 +25,15 @@ jobs:
         with:
           go-version: '1.23.2'
 
-      - name: Install Dependencies
+      - name: Install and Download Dependencies
         run: |
           if [ -d "$PROJECT_NAME" ]; then
             cd $PROJECT_NAME
             go mod tidy
+            if [ "$PROJECT_NAME" = "ccwc" ]; then
+              echo "Detected project ccwc, downloading test.txt..."
+              curl -L -o tests/test.txt https://www.dropbox.com/scl/fi/d4zs6aoq6hr3oew2b6a9v/test.txt?rlkey=20c9d257pxd5emjjzd1gcbn03&e=3&dl=1
+            fi
           else
             echo "Directory $PROJECT_NAME not found, skipping..."
           fi

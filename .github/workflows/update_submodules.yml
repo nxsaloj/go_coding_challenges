@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout submodules to main
+      - name: Checkout main repo with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -28,8 +28,22 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add "${{ github.event.client_payload.submodule }}"
-            git commit -m "chore: update submodule ${{ github.event.client_payload.submodule }}" || echo "No changes to commit"
-            git push
           else
             echo "Directory ${{ github.event.client_payload.submodule }} not found, skipping submodule update..."
+            exit 0
           fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update submodule ${{ github.event.client_payload.submodule }}"
+          branch: update-submodule-${{ github.event.client_payload.submodule }}
+          title: "chore: update submodule ${{ github.event.client_payload.submodule }}"
+          body: "This PR updates the submodule reference to the latest HEAD."
+          auto-merge: true
+
+      - name: Auto-approve PR
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

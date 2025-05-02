@@ -33,7 +33,8 @@ jobs:
             exit 0
           fi
 
-      - name: Create Pull Request
+      - name: Create Pull Request      
+        id: cpr
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -47,3 +48,4 @@ jobs:
         uses: hmarr/auto-approve-action@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}

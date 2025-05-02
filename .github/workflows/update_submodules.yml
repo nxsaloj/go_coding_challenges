@@ -1,0 +1,31 @@
+name: Update Changed Submodule
+
+on:
+  repository_dispatch:
+    types: [update-submodule]
+
+jobs:
+  update-submodule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout submodules to main
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update only the triggered submodule
+        run: |
+          echo "Submodule to update: ${{ github.event.client_payload.submodule }}"
+          
+          cd "${{ github.event.client_payload.submodule }}"
+          git fetch origin main
+          git checkout origin/main
+          cd ../
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${{ github.event.client_payload.submodule }}"
+          git commit -m "chore: update submodule ${{ github.event.client_payload.submodule }}" || echo "No changes to commit"
+          git push
